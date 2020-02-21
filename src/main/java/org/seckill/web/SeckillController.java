@@ -101,4 +101,6 @@ public class SeckillController {
         Date now = new Date();
         return new SeckillResult<Long>(true,now.getTime());
     }
+
+
 }

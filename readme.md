@@ -12,11 +12,11 @@
 
 本项目的完成基于原项目，是自主学习的记录。有些原项目中开发知识点由于版本升级的原因（如mysql）已经不再适用，本说明文档会记录自己踩过的坑。
 
-​	![](/Users/hzx/version-control/seckill_hzx/image/seckill.png)
+​	![](https://github.com/shendezhuti/seckill_hzx/blob/master/image/seckill.png)
 
-![](/Users/hzx/version-control/seckill_hzx/image/seckill function.jpg)
+![](https://github.com/shendezhuti/seckill_hzx/blob/master/image/seckill function.jpg)
 
-![seckill-core](/Users/hzx/version-control/seckill_hzx/image/seckill-core.png)
+![seckill-core](https://github.com/shendezhuti/seckill_hzx/blob/master/image/seckill-core.png)
 
 ### 1.使用maven在terminal中创建项目
 
@@ -994,7 +994,7 @@ public enum SeckillStatEnum {
 
 #### 4.3使用spring托管service依赖配置
 
-![]()
+![](https://github.com/shendezhuti/seckill_hzx/blob/master/image/spring.png)
 
 在spring下创建spring-service.xml 实现扫描service包下所有使用注解的类型
 
@@ -1015,7 +1015,7 @@ public enum SeckillStatEnum {
 
 #### 4.4使用spring声明式事务理论
 
-![]()
+![](https://github.com/shendezhuti/seckill_hzx/blob/master/image/srping-transactional.png)
 
 在spring-service.xml文件中添加
 
@@ -1105,13 +1105,13 @@ public class SeckillServiceImplTest {
 
 #### 5.2 restful接口
 
-![](/Users/hzx/version-control/seckill_hzx/image/restful.jpg)
+![](https://github.com/shendezhuti/seckill_hzx/blob/master/image/restful.jpg)
 
 #### 5.3使用springmvc理论
 
-![](/Users/hzx/version-control/seckill_hzx/image/spring mvc.jpg)
+![](https://github.com/shendezhuti/seckill_hzx/blob/master/image/spring mvc.jpg)
 
-​	![](/Users/hzx/version-control/seckill_hzx/image/springmvc request function.png)
+​	![](https://github.com/shendezhuti/seckill_hzx/blob/master/image/springmvc request function.png)
 
 #### 5.4整合配置SpringMVC框架
 
@@ -1295,7 +1295,7 @@ detail.jsp和list.jsp由于代码过多，这里暂不列举。
 
 ### 六.高并发秒杀优化
 
-![](/Users/hzx/version-control/seckill_hzx/image/concurrency.png)
+![](https://github.com/shendezhuti/seckill_hzx/blob/master/image/concurrency.png)
 
 之前开发的时候，我们将detail页、静态资源放在了CDN上，因此访问这些资源不需要返回系统，这个时候拿不到系统的时间，因此要单独做一个请求获取服务器的时间。
 
@@ -1322,7 +1322,7 @@ CDN是什么：
 
 #### 高并发出现的点：
 
-![](/Users/hzx/version-control/seckill_hzx/image/concurrency-analysis.png)
+![](https://github.com/shendezhuti/seckill_hzx/blob/master/image/concurrency-analysis.png)
 
 - 获取系统时间（但是不用优化，访问一次内存(Cacheline)大约10ns）
 - 秒杀地址接口分析：
@@ -1344,7 +1344,7 @@ CDN是什么：
 
 #### Java控制事务行为分析
 
-![](/Users/hzx/version-control/seckill_hzx/image/concurrency-analysis-java.png)
+![](https://github.com/shendezhuti/seckill_hzx/blob/master/image/concurrency-analysis-java.png)
 
 #### 瓶颈分析：
 update 减库存：客户端会执行update，根据拿到结果是否更新了，当我们的SQL通过网络发送给数据库时本身就有网络延迟，
@@ -1466,13 +1466,13 @@ public class RedisDAO {
 
 #### 并发优化1
 
-![image-20200221121315935](/Users/hzx/version-control/seckill_hzx/image/original-transaction.png)
+![image-20200221121315935](https://github.com/shendezhuti/seckill_hzx/blob/master/image/original-transaction.png)
 
 
 
 
 
-![image-20200221132421337](/Users/hzx/version-control/seckill_hzx/image/simple-improvement.png)
+![image-20200221132421337](https://github.com/shendezhuti/seckill_hzx/blob/master/image/simple-improvement.png)
 
 #### 并发优化2-存储过程
 

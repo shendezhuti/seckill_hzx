@@ -5,6 +5,7 @@ import org.seckill.entity.Seckill;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 public interface SeckillDAO {
 
@@ -32,4 +33,10 @@ public interface SeckillDAO {
      * @return
      */
     List<Seckill> queryAll(@Param("offset") int offset,@Param("limit") int limit);
+
+    /**
+     *
+     * @param paraMap
+     */
+    void killByProcedure(Map<String ,Object> paraMap);
 }

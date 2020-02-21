@@ -2,7 +2,7 @@
 
 ### 时间：2020.02.06
 
-## 功能
+### 功能
 
 - 秒杀接口暴露
 - 执行秒杀
@@ -11,6 +11,12 @@
 > [原项目github链接](https://github.com/codingXiaxw/seckill)
 
 本项目的完成基于原项目，是自主学习的记录。有些原项目中开发知识点由于版本升级的原因（如mysql）已经不再适用，本说明文档会记录自己踩过的坑。
+
+​	![](/Users/hzx/version-control/seckill_hzx/image/seckill.png)
+
+![](/Users/hzx/version-control/seckill_hzx/image/seckill function.jpg)
+
+![seckill-core](/Users/hzx/version-control/seckill_hzx/image/seckill-core.png)
 
 ### 1.使用maven在terminal中创建项目
 
@@ -22,7 +28,7 @@ mvn archetype:generate -DgroupId=org -DartifactId=seckill -DarchetypeArtifactId=
 
 ### 2.数据库编码部分
 
-> 作者zhang提到，最好能拥有手写sql语言的能力，这样对项目上线后的修改非常有帮助
+> 作者zhang提到，最好能拥有手写sql语言的能力，记录每次上线的DDL。这样对项目上线后的修改非常有帮助
 
 在mysql5.17后，如果直接使用作者的sql代码，会产生如下错误
 
@@ -301,7 +307,7 @@ public interface SuccessKilledDAO {
 
 ```
 
-### 基于mybatis实现DAO
+#### 3.1基于mybatis实现DAO
 
 mybatis与hibernate的作用是建立数据库与Entity实体对象的映射
 
@@ -318,7 +324,7 @@ mybatis与hibernate的作用是建立数据库与Entity实体对象的映射
 
 一般来说建议使用xml提供sql，使用Mapper自动实现DAO接口，减少代码量。
 
-### 配置mybatis
+#### 3.2配置mybatis
 
 在resources下创建mybatis-config.xml
 
@@ -399,6 +405,7 @@ mybatis与hibernate的作用是建立数据库与Entity实体对象的映射
         <!--当出现主键冲突时(即重复秒杀时)，会报错;不想让程序报错，加入ignore-->
         INSERT ignore INTO success_killed(seckill_id,user_phone,state)
         VALUES (#{seckillId},#{userPhone},0)
+        <!-- timestamp 类型的列插入如果为null，为自动生成系统当前时间-->
     </insert>
 
     <select id="queryByIdWithSeckill" resultType="SuccessKilled">
@@ -424,7 +431,7 @@ mybatis与hibernate的作用是建立数据库与Entity实体对象的映射
 </mapper>
 ```
 
-### mybatis整合spring理论
+#### 3.3mybatis整合spring理论
 
 **整合目标**
 
@@ -448,7 +455,7 @@ org.seckill.entity.Seckill->Seckill         （基于package scan实现）
 
 自己定制SQL+自由传参 -> 结果集自动赋值
 
-### mybatis整合spring编码
+#### 3.4mybatis整合spring编码
 
 在resources/spring下创建srping-dao.xml
 
@@ -509,7 +516,7 @@ org.seckill.entity.Seckill->Seckill         （基于package scan实现）
 </beans>
 ```
 
-### DAO层单元测试编码和问题排查
+#### 3.5DAO层单元测试编码和问题排查
 
 博主用的IDEA是2018.3的版本，使用junit4单元测试不出现版本，这应该是个bug？解决方法：将DAO从interface改为class再改回去就好了。
 
@@ -985,5 +992,617 @@ public enum SeckillStatEnum {
 
 目前为止我们Service的实现全部完成，接下来要将Service交给Spring的容器托管，进行一些配置。
 
-### 4.3使用spring托管service依赖配置
+#### 4.3使用spring托管service依赖配置
+
+![]()
+
+在spring下创建spring-service.xml 实现扫描service包下所有使用注解的类型
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context" xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <!-- 扫描service包下所有使用注解的类型-->
+    <context:component-scan base-package="org.seckill.service"/>
+
+</beans>
+```
+
+然后对SeckillServiceImpl类加上 `@Service`表明这是一个service类，注入spring容器。我们知道SeckillDAO和SuccessKilledDAO是mybatis和spring整合后，Dao都会以mapper的方式初始化好，放到spring容器中。在SeckillServiceImpl要获取这两个类的实例的话使用`@Autowired`，对象会自动注入
+
+#### 4.4使用spring声明式事务理论
+
+![]()
+
+在spring-service.xml文件中添加
+
+```xml
+<!-- 配置事务管理器-->
+
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <!-- 注入数据库连接池-->
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+    <!-- 配置基于注解的声明式事务
+           默认使用注解来管理事务行为
+    -->
+
+    <tx:annotation-driven transaction-manager="transactionManager"/>
+```
+
+同时在`executeSeckill()`方法上加上@Transcational注解，利用spring控制事务
+
+ 使用注解控制事务方法的优点：
+
+* 1.开发团队达成一致目标，明确标注事务方法的编程风格。
+* 2.保证事务方法的执行时间尽可能的短，不要穿插其他网络操作，RPC/Http请求/
+* 3.不是所有的方法都需要事务，如只有一条修改操作，只读操作不需要事务控制
+
+#### 4.5集成测试
+
+```java
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration({"classpath:spring/spring-dao.xml",
+        "classpath:spring/spring-service.xml"})
+public class SeckillServiceImplTest {
+    private final Logger logger= LoggerFactory.getLogger(this.getClass());
+
+    @Autowired
+    SeckillService seckillService;
+    @Test
+    public void getSeckillList() {
+        List<Seckill> list= seckillService.getSeckillList();
+        logger.info("list={}",list);
+
+    }
+
+    @Test
+    public void getById() {
+        long id=1000;
+        Seckill seckill = seckillService.getById(id);
+        logger.info("seckilll={}",seckill);
+    }
+
+
+    /**
+     * 注意这样写可以确保，集成测试的完整性
+     */
+    @Test
+    public void exportSeckillLogic() {
+        long id = 1002;
+        Exposer exposer = seckillService.exportSeckillUrl(id);
+        if (exposer.isExposed()) {
+            long phone=18684767685L;
+            String md5="e7723ed46a43abc2a11ed7400f83542a";
+            try{
+                SeckillExecution execution= seckillService.executeSeckill(id,phone,md5);
+                logger.info("result={}",execution);
+            }catch (RepeatKillException e1){
+                logger.error(e1.getMessage());
+            }catch (SeckillCloseException e2){
+                logger.error(e2.getMessage());
+            }catch(Exception e){
+                logger.error(e.getMessage());
+            }
+        } else {
+            logger.warn("exposer={}", exposer);
+        }
+    }
+}
+```
+
+### 5.Web层
+
+#### 5.1前端业务流程
+
+![s](/Users/hzx/version-control/seckill_hzx/image/front_end_process.png)
+
+
+
+#### 5.2 restful接口
+
+![](/Users/hzx/version-control/seckill_hzx/image/restful.jpg)
+
+#### 5.3使用springmvc理论
+
+![](/Users/hzx/version-control/seckill_hzx/image/spring mvc.jpg)
+
+​	![](/Users/hzx/version-control/seckill_hzx/image/springmvc request function.png)
+
+#### 5.4整合配置SpringMVC框架
+
+在spring包下创建spring-web.xml
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/mvc
+        http://www.springframework.org/schema/mvc/spring-mvc.xsd">
+
+    <!--配置spring mvc-->
+    <!--1,开启springmvc注解模式
+    a.自动注册DefaultAnnotationHandlerMapping,AnnotationMethodHandlerAdapter
+    b.默认提供一系列的功能:数据绑定，数字和日期的format@NumberFormat,@DateTimeFormat
+    c:xml,json的默认读写支持-->
+    <mvc:annotation-driven/>
+
+    <!--2.静态资源默认servlet配置-->
+    <!--
+        1).加入对静态资源处理：js,gif,png
+        2).允许使用 "/" 做整体映射
+    -->
+    <mvc:default-servlet-handler/>
+
+    <!--3：配置JSP 显示ViewResolver-->
+    <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+        <property name="viewClass" value="org.springframework.web.servlet.view.JstlView"/>
+        <property name="prefix" value="/WEB-INF/jsp/"/>
+        <property name="suffix" value=".jsp"/>
+    </bean>
+
+    <!--4:扫描web相关的bean-->
+    <context:component-scan base-package="org.seckill.web"/>
+</beans>
+```
+
+#### 5.5使用SpringMVC实现Restful接口
+
+首先在seckill下创建SeckillController
+
+```java
+
+@Controller
+@RequestMapping("/seckill")
+public class SeckillController {
+    private Logger logger = LoggerFactory.getLogger(this.getClass());
+
+    @Autowired
+    SeckillService seckillService;
+    @RequestMapping(value = "/list",method = RequestMethod.GET)
+    public String list(Model model){
+        //list.jsp+model = ModelAndView
+        List<Seckill> list= seckillService.getSeckillList();
+
+        model.addAttribute("list",list);
+        return "list";
+    }
+
+    @RequestMapping(value = "/{seckillId}/detail",method = RequestMethod.GET)
+    public String detail(@PathVariable("seckillId") Long seckillId, Model model){
+        if(seckillId==null){
+            return  "redirect:/seckill/list";
+        }
+
+        Seckill seckill= seckillService.getById(seckillId);
+        if(seckill==null){
+            return "forward:/seckill/list";
+        }
+
+        model.addAttribute("seckill",seckill);
+        return "detail";
+    }
+
+    //ajax json接口
+    @RequestMapping(value="/{seckillId}/exposer",method = RequestMethod.POST)
+    public void /*TODO */ exposer(Long seckillId){
+
+    }
+
+```
+
+我们还需要一个dto来封装json结果，在dto包下创建SeckillResult<T>
+
+```java
+package org.seckill.dto;
+
+
+//封装json结果
+public class SeckillResult <T>{
+
+    private boolean success;
+    private T data;
+
+    private String error;
+
+    public SeckillResult(boolean success, T data) {
+        this.success = success;
+        this.data = data;
+    }
+
+    public SeckillResult(boolean success, String error) {
+        this.success = success;
+        this.error = error;
+    }
+
+    public boolean isSuccess() {
+        return success;
+    }
+
+    public void setSuccess(boolean success) {
+        this.success = success;
+    }
+
+    public T getData() {
+        return data;
+    }
+
+    public void setData(T data) {
+        this.data = data;
+    }
+
+    public String getError() {
+        return error;
+    }
+
+    public void setError(String error) {
+        this.error = error;
+    }
+}
+
+```
+
+接下来补全刚才的exposer方法和新建execute和now方法
+
+```java
+@RequestMapping(value="/{seckillId}/{md5}/execution",
+        method = RequestMethod.POST,
+            produces = {"application/json;charset=UTF-8"})
+    @ResponseBody
+    public SeckillResult<SeckillExecution> execute(@PathVariable("seckillId") Long seckillId,@PathVariable("md5") String md5,
+
+                                                   @CookieValue(value="killPhone",required = false) Long phone){
+        if(phone==null){
+            return new SeckillResult<SeckillExecution>(false,"未注册");
+        }
+        SeckillResult<SeckillExecution> result;
+        try {
+            SeckillExecution seckillExecution = seckillService.executeSeckill(seckillId, phone, md5);
+            return new SeckillResult<SeckillExecution>(true,seckillExecution);
+        }catch (RepeatKillException e){
+            SeckillExecution execution = new SeckillExecution(seckillId, SeckillStateEnum.REPEAT_KILL);
+            return new SeckillResult<SeckillExecution>(false,execution);
+        }catch (SeckillCloseException e){
+            SeckillExecution execution = new SeckillExecution(seckillId, SeckillStateEnum.END);
+            return new SeckillResult<SeckillExecution>(false,execution);
+        }
+        catch (Exception e){
+            SeckillExecution execution = new SeckillExecution(seckillId, SeckillStateEnum.INNER_ERROR);
+            return new SeckillResult<SeckillExecution>(false,execution);
+        }
+    }
+
+
+    @RequestMapping(value="/time/now",method = RequestMethod.GET)
+    public SeckillResult <Long> time(){
+
+        Date now = new Date();
+        return new SeckillResult<Long>(true,now.getTime());
+    }
+```
+
+detail.jsp和list.jsp由于代码过多，这里暂不列举。
+
+### 六.高并发秒杀优化
+
+![](/Users/hzx/version-control/seckill_hzx/image/concurrency.png)
+
+之前开发的时候，我们将detail页、静态资源放在了CDN上，因此访问这些资源不需要返回系统，这个时候拿不到系统的时间，因此要单独做一个请求获取服务器的时间。
+
+获取系统时间不用优化，因为Java访问一次内存(cacheline)大约10ns
+
+秒杀地址接口分析无法使用CDN缓存，CDN适合请求资源不变化，一个URL对应一个结果。秒杀地址的返回结果可能是在变化的。秒杀地址接口可以放在服务器端缓存：redis等。一秒可以抗10WQPS，集群化之后可以抗百万的QPS(每秒查询率QPS,也即每秒的响应请求数，是对一个特定的查询服务器在规定时间内所处理流量多少的衡量标准)。后端缓存可以用业务系统来控制，访问数据库拿到秒杀数据后，放到redis缓存，下次访问可以直接从缓存中获取。
+
+CDN的特点和相关信息：
+使用CDN 获取公共js http://www.bootcdn.cn/
+CDN特点：CDN是和请求对应的资源是不变化的，比如静态资源和JavaScript（URL对应的结果不变）
+CDN是什么：
+   1：CDN是(内容分发网络)加速用户获取数据的系统，例如视频资源
+   2：部署在离用户最近的网络节点上 3：命中CDN不需要访问后端服务器
+   4：互联网公司自己搭建或租用CDN
+使用CDN的好处：
+   01 不用去官网直接下载 02 当我们的服务上线一些稳定可靠的CDN比直接发布到我们的服务器更有效
+   03 CDN也是web最重要的一个加速的功能点 怎样让系统抗住很高的并发的时候CDN也是一个点
+
+
+
+秒杀地址接口本质是拿了一个秒杀对象：对当前时间和秒杀开启时间做一个判断来决定返回数据是什么样的，决定是否要返回秒杀接口。
+
+
+
+#### 高并发出现的点：
+
+![](/Users/hzx/version-control/seckill_hzx/image/concurrency-analysis.png)
+
+- 获取系统时间（但是不用优化，访问一次内存(Cacheline)大约10ns）
+- 秒杀地址接口分析：
+    1.无法使用CDN缓存
+    2.但是它适合放在服务器缓存：Redis等->内存的服务器端的缓存可以抗很高的QPS，10^5/sQPS,
+     现在Redis可以做集群，做了之后QPS可以达到10^6/s。
+    3.为什么要做后端缓存 -> 因为后端缓存可以用我们的业务系统来控制。
+     比如先访问数据库拿到秒杀的数据放到Redis缓存里面去，当一次访问的时候直接去缓存里面查找，
+     缓存有就直接返回，而不去访问我们数据库了。
+    4.一致性维护成本比较低：当我们秒杀的东西或秒杀的对象改变了的时候，
+     我们可以修改我们的数据库，同时在改一下我们的缓存，或者干脆不改，等超时之后在改
+
+秒杀地址接口优化：请求地址 -> Redis[一致性维护(超时穿透到SQL语句/当SQL语句更新时主动更新)] -> SQL语句
+
+- 秒杀操作优化分析(是最重要的一个秒杀按钮操作)：
+    1.也是不能使用CDN缓存的，CDN不可能把你最核心的东西给缓存(大部分写操作或最核心的数据请求一般没办法使用CDN)
+    2.后端缓存困难：库存的问题，不可能在缓存里面减库存，否则会产生数据不一致问题。所以要通过事务来保证数据的一致性
+    3.一行数据竞争：热点商品，会对数据库表中的那一行数据产生大量的update减库存竞争
+
+#### Java控制事务行为分析
+
+![](/Users/hzx/version-control/seckill_hzx/image/concurrency-analysis-java.png)
+
+#### 瓶颈分析：
+update 减库存：客户端会执行update，根据拿到结果是否更新了，当我们的SQL通过网络发送给数据库时本身就有网络延迟，
+       除了网络延迟还有java GC（garbage collection,垃圾回收）操作 -> 不需要手动去回收，
+       GC自动就帮我们回收了，新生代GC会暂停所有的事务代码（Java代码）后，执行GC（一般在几十ms），
+       并且，同一行事务是做串行化的。
+
+----》insert 购买明细：也会存在网络延迟和GC
+----》commit/rollback
+也就是说如果是Java客户端去控制这些事务会有什么问题：update 减库存（网络延迟，可能的GC，GC不一定每次都出现，但一定会出现）
+
+--> 执行insert 购买明细（在网络延迟等待insert语句的返回，然后也可能会GC） --> 最后commit/rollback。
+当前面的这些操作都执行完之后，第二个等待行锁的线程菜能够有机会拿到这一行的锁在去执行update减库存
+
+特点：
+
+根据上面的拆分，所以QPS很好分析了 --->（我们所有的SQL执行时间 + 网络延迟时间 + 可能的GC）这一行数据就是当前可以执行的时间.比如时间是2ms,概念是1s之内只能有500次减库存的秒杀操作，但是对于秒杀系统，特别是热点系统来说其实是不能满足我们的要求的，特别是排队特别长的时候，性能会呈现指数级别下降
+
+得到的点是：行级锁是在commit/rollback之后释放的；
+优化方向：怎样减少行级锁持有的时间 ---> （当你update表中一行数据的时候，一定要快速的commit/rollback，
+     因为其他还在等待，因为这是一个热点的数据）；
+
+#### 如何判断Update更新库成功
+
+两个条件：
+
+- update自身没报错
+- 客户端确认update影响记录数
+
+#### 延迟分析：
+延迟问题是很关键的；
+优化思路：
+
+- 把客户端逻辑放到MySQL（数据库）服务端，避免网络延迟和GC影响
+- 如何放到MySQL服务端：
+
+#### 如何放到MySQL服务端
+
+--两种解决方案：
+
+- 定制SQL方案： 早期的阿里巴巴的天猫做了一个MySQL的源码层的修改 --->update/*+[auto_commit]*/，
+    但是执行完这句update之后，会自动进行回滚（条件是：当update影响的记录数是1，它就会commit，如果等于0就会rollback）也就是说它不给Java客户端和MySQL之间网络延迟，然后在由Java客户端去控制commit还是rollback，而是直接用这条语句直接发过去，告诉它是commit还是rollback。本质上也是降低了网络延迟和GC的干扰，但是成本很高 --> 需要修改MySQL源码，大公司可以这样的团队
+
+- 使用存储过程： 整个事务在MySQL端完成；存储过程设计出来的本质就是想让我们的一组SQL组成一个事务，然后在服务器端完成，而避免客户端去完成事务造成的一个性能的干扰。一般情况下像是spring声明式事务或我们手动控制事务都是客户端控制事务，这个事务在行级锁没有那么高的竞争情况下是完全OK的，但秒杀是一个特殊的应用场景，它会在同一行中产生热点，大家都竞争同一行，那么这个时候存储过程就发挥作用了，它把整个这条SQL执行过程完全放在MySQL中完成了， MySQL执行的效率非常高，因为我们都是通过主键去执行的，查询或更新
+
+#### 优化总结
+
+- 前端控制：暴露接口，按钮防重复
+- 动静态数据分离：CDN缓存，后端缓存
+- 事务竞争优化：减少事务锁时间 ---> 这是秒杀用MySQL解决秒杀问题的很重要的一个关键点；
+    因为用事务有一个很大的优点是：保证原子性、隔离性、一致性、持久性。
+
+
+
+#### redis 后端缓存优化编码
+
+引入redis在哪优化呢？找到我们的`SeckillServiceImpl`，在暴露秒杀地址的方法`exportSeckillUrl`。在这里我们通过主键查询数据库seckill记录，可以通过redis缓存，降低数据库的访问量。注意在这里老师说，很多工程师会犯错，直接在这里写入业务的代码。我们由于有dao层，所以应该把访问redis的代码写在dao层。
+
+我们在dao包下新建cache包，创建RedisDAO方法
+
+```java
+public class RedisDAO {
+    private Logger logger = LoggerFactory.getLogger(this.getClass());
+    private JedisPool jedisPool;
+    private RuntimeSchema<Seckill> schema=RuntimeSchema.createFrom(Seckill.class);
+
+    public RedisDAO(String ip,int port){
+         jedisPool = new JedisPool(ip,port);
+    }
+
+    public Seckill getSeckill(long seckillId){
+        //redis操作
+
+        try {
+            Jedis jedis = jedisPool.getResource();
+            try {
+               String key = "seckill:"+seckillId;
+               //并没有实现内部序列化操作
+                //get->byte[]->反序列化->Object(Seckill)
+                byte [] bytes=jedis.get(key.getBytes());
+                if(bytes!=null){
+                    Seckill seckill = schema.newMessage();
+                    ProtostuffIOUtil.mergeFrom(bytes,seckill,schema);
+                    //seckill 被反序列化
+                    return seckill;
+                }
+            } finally {
+                jedis.close();
+            }
+        } catch (Exception e) {
+            logger.error(e.getMessage(),e);
+        }
+
+        return null;
+    }
+
+    public String putSeckill(Seckill seckill){
+        // set Object (seckill) -> 序列化->byte[]
+        try {
+            Jedis jedis= jedisPool.getResource();
+            try{
+                String key = "seckill:"+seckill.getSeckillId();
+                byte[]bytes=ProtostuffIOUtil.toByteArray(seckill,schema, LinkedBuffer.allocate(LinkedBuffer.DEFAULT_BUFFER_SIZE));
+                int timeout=60*60;
+              //超时缓存
+                String result = jedis.setex(key.getBytes(),timeout,bytes);
+                return result;
+            }finally {
+                jedis.close();
+            }
+        } catch (Exception e) {
+            logger.error(e.getMessage(),e);
+        }
+        return null;
+    }
+}
+
+```
+
+#### 并发优化1
+
+![image-20200221121315935](/Users/hzx/version-control/seckill_hzx/image/original-transaction.png)
+
+
+
+
+
+![image-20200221132421337](/Users/hzx/version-control/seckill_hzx/image/simple-improvement.png)
+
+#### 并发优化2-存储过程
+
+我们将之前在客户端写的 购买明细逻辑+减库存逻辑 全部放在 MySQL端，在MySQL端编写存储过程，进行优化，这样可以避免了之前分析过的网络延迟这个性能杀手。
+
+```sql
+-- 秒杀执行存储过程
+
+DElIMITER $$ -- console;转换为$$
+
+-- 定义存储过程
+-- 参数：in输入参数; out 输出参数
+-- count count():返回上一条修改类型sql(delete,insert,update)的影响行数
+-- row_count: 0 影响未修改数据 >0 修改的行数  <0 sql错误/未修改执行sql
+CREATE PROCEDURE `seckill`.`execute_seckill`
+    (in v_seckill_id bigint, in v_phone bigint,
+     in v_kill_time timestamp, out r_result int)
+    BEGIN
+        DECLARE insert_count int DEFAULT 0;
+        START TRANSACTION;
+        insert ignore into success_killed
+            (seckill_id, user_phone, create_time,state)
+            values (v_seckill_id, v_phone, v_kill_time,0);
+        select row_count() into insert_count;
+        IF (insert_count = 0) THEN
+            ROLLBACK;
+            set r_result = -1;
+        ELSEIF(insert_count < 0) THEN
+            ROLLBACK;
+            set r_result = -2;
+        ELSE
+            update seckill
+            set number = number - 1
+            where seckill_id = v_seckill_id
+                and end_time > v_kill_time
+                and start_time < v_kill_time
+                and number > 0;
+            select row_count() into insert_count;
+            IF (insert_count = 0) THEN
+                ROLLBACK;
+                set r_result = 0;
+            ELSEIF (insert_count < 0) THEN
+                ROLLBACK;
+                set r_result = -2;
+            ELSE
+                COMMIT;
+                set r_result = 1;
+            END IF;
+        END IF;
+    END;
+$$
+-- 存储过程定义结束
+
+DELIMITER ;
+
+set @r_result =-3;
+call execute_seckill(1000,18684767681,now(),@r_result);
+select @r_result;
+
+-- 存储过程
+-- 1：存储过程优化：事务行级锁持有的时间，
+--2：不要过度依赖存储过程
+--3.简单的逻辑，可以应用存储过程
+--4:QPS：一个秒杀单6000/qps
+```
+
+在SeckillDAO下新建 void killByProcedure(Map<String,Obejct> paramMap)；接口 
+
+```java
+ List<Seckill> queryAll(@Param("offset") int offset,@Param("limit") int limit);
+
+    /**
+     *
+     * @param paraMap
+     */
+    void killByProcedure(Map<String ,Object> paraMap);
+```
+
+在SeckillDao.xml下新增mybatis调用存储过程
+
+```xml
+ <!--mybatis调用存储过程-->
+
+    <select id="killByProcedure" statementType="CALLABLE">
+        call execute_seckill(
+          #{seckillId,jdbcType=BIGINT,mode=IN},
+          #{phone,jdbcType=BIGINT,mode=IN},
+          #{killTime,jdbcType=TIMESTAMP,mode=IN},
+          #{result,jdbcType=INTEGER,mode=OUT},
+        )
+    </select>
+```
+
+在SeckillServiceImpl类中新增实现方法
+
+```java
+   @Override
+    public SeckillExecution executeSeckillProcedure(long seckillId, long userPhone, String md5)  {
+        if(md5==null||!md5.equals(md5)){
+            return new SeckillExecution( seckillId,SeckillStateEnum.DATA_REWRITE);
+
+        }
+        Date killTime= new Date();
+        Map<String,Object> map = new HashMap<>();
+        map.put("seckillId",seckillId);
+        map.put("phone",userPhone);
+        map.put("killTime",killTime);
+        map.put("result",null);
+
+        try {
+            seckillDAO.killByProcedure(map);
+            int result = MapUtils.getInteger(map,"result",-2);
+            if(result == 1){
+                SuccessKilled sk = successKilledDAO.queryByIdWithSeckill(seckillId,userPhone);
+                return new SeckillExecution(seckillId,SeckillStateEnum.Success,sk);
+            }else{
+                return new SeckillExecution(seckillId,SeckillStateEnum.Success.stateof(result));
+            }
+        } catch (Exception e) {
+            logger.error(e.getMessage(),e);
+            return new SeckillExecution(seckillId,SeckillStateEnum.Success.INNER_ERROR);
+
+        }
+    }
+```
+
+在SeckillController类中实现存储过程的调用
+
+```java
+            SeckillExecution seckillExecution = seckillService.executeSeckillProcedure(seckillId, userPhone, md5);
+
+```
 

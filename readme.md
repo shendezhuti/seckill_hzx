@@ -14,7 +14,7 @@
 
 ​	![](https://github.com/shendezhuti/seckill_hzx/blob/master/image/seckill.png)
 
-![](https://github.com/shendezhuti/seckill_hzx/blob/master/image/seckill function.jpg)
+![](https://github.com/shendezhuti/seckill_hzx/blob/master/image/seckill-function.jpg)
 
 ![seckill-core](https://github.com/shendezhuti/seckill_hzx/blob/master/image/seckill-core.png)
 
@@ -1109,9 +1109,9 @@ public class SeckillServiceImplTest {
 
 #### 5.3使用springmvc理论
 
-![](https://github.com/shendezhuti/seckill_hzx/blob/master/image/spring mvc.jpg)
+![](https://github.com/shendezhuti/seckill_hzx/blob/master/image/spring-mvc.jpg)
 
-​	![](https://github.com/shendezhuti/seckill_hzx/blob/master/image/springmvc request function.png)
+​	![](https://github.com/shendezhuti/seckill_hzx/blob/master/image/springmvc-request-function.png)
 
 #### 5.4整合配置SpringMVC框架
 

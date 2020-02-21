@@ -51,10 +51,10 @@ public class SeckillController {
     }
 
     //ajax json接口
-    @RequestMapping(value="/{seckillId}/exposer",method = RequestMethod.POST,
+    @RequestMapping(value="/{seckillId}/exposer",method = RequestMethod.GET,
     produces = {"application/json;charset=UTF-8"})
     @ResponseBody
-    public SeckillResult<Exposer>  exposer(Long seckillId){
+    public SeckillResult<Exposer>  exposer(@PathVariable("seckillId") Long seckillId){
         SeckillResult<Exposer> result;
         try {
             Exposer exposer = seckillService.exportSeckillUrl(seckillId);
@@ -72,13 +72,13 @@ public class SeckillController {
     @ResponseBody
     public SeckillResult<SeckillExecution> execute(@PathVariable("seckillId") Long seckillId,@PathVariable("md5") String md5,
 
-                                                   @CookieValue(value="killPhone",required = false) Long phone){
-        if(phone==null){
+                                                   @CookieValue(value="userPhone",required = false) Long userPhone){
+        if(userPhone==null){
             return new SeckillResult<SeckillExecution>(false,"未注册");
         }
         SeckillResult<SeckillExecution> result;
         try {
-            SeckillExecution seckillExecution = seckillService.executeSeckill(seckillId, phone, md5);
+            SeckillExecution seckillExecution = seckillService.executeSeckill(seckillId, userPhone, md5);
             return new SeckillResult<SeckillExecution>(true,seckillExecution);
         }catch (RepeatKillException e){
             SeckillExecution execution = new SeckillExecution(seckillId, SeckillStateEnum.REPEAT_KILL);
@@ -95,6 +95,7 @@ public class SeckillController {
 
 
     @RequestMapping(value="/time/now",method = RequestMethod.GET)
+    @ResponseBody
     public SeckillResult <Long> time(){
 
         Date now = new Date();

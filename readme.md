@@ -1099,7 +1099,7 @@ public class SeckillServiceImplTest {
 
 #### 5.1前端业务流程
 
-![s](/Users/hzx/version-control/seckill_hzx/image/front_end_process.png)
+![s](https://github.com/shendezhuti/seckill_hzx/blob/master/image/front_end_process.png)
 
 
 
